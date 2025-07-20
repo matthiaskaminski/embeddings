@@ -1,171 +1,242 @@
-# Flask Embedding Server - Furniture Similarity Search
+# Szuk.AI Embeddings - Furniture Similarity Search
 
-Zaawansowany serwer Flask do wyszukiwania podobnych mebli z wykorzystaniem multi-modal embeddingów.
+Advanced AI-powered furniture similarity search system using CLIP, DINOv2, and OpenAI embeddings with FAISS indexing.
 
-## Funkcje
+## 🎯 Features
 
-- **Multi-modal embeddings**: CLIP + DINOv2 + OpenAI Text
-- **FAISS Vector Database**: Szybkie wyszukiwanie podobieństwa
-- **GPU Acceleration**: Automatyczna optymalizacja dla RTX 3060
-- **Reciprocal Nearest Neighbors**: Test wzajemności podobieństwa
-- **Batch Processing**: Przetwarzanie wielu produktów naraz
+- **Multi-modal embeddings**: CLIP (visual) + DINOv2 (features) + OpenAI (text)
+- **Large model support**: ViT-L/14@336px + DINOv2 giant
+- **Concatenation strategy**: 5376-dimensional combined embeddings  
+- **Two-stage search**: Coarse retrieval → re-ranking → top results
+- **Background removal**: Automated with Rembg
+- **Async processing**: Background tasks for large datasets
+- **RunPod ready**: One-click deployment on GPU cloud
+- **Git LFS**: Efficient storage for FAISS indexes
 
-## Instalacja
+## 🚀 Quick Deploy (RunPod)
 
-1. Zainstaluj zależności:
 ```bash
-pip install -r requirements.txt
+curl -sSL https://raw.githubusercontent.com/[username]/szuk-ai-embeddings/main/setup.sh | bash
 ```
 
-2. Uruchom serwer:
+## 📊 Architecture
+
+### Models Used
+- **CLIP ViT-L/14@336px**: 768-dim visual embeddings
+- **DINOv2 Giant**: 1536-dim advanced visual features  
+- **OpenAI text-embedding-3-large**: 3072-dim text features
+- **Combined**: 5376-dim concatenated embeddings
+
+### Workflow
+1. **Image preprocessing** → Background removal
+2. **Multi-scale processing** → 224px, 336px, 448px
+3. **Feature extraction** → Visual + text embeddings
+4. **FAISS indexing** → Fast similarity search
+5. **Two-stage search** → 1750 → 300 → 6-8 results
+
+## 🔧 API Endpoints
+
+### Build & Management
 ```bash
+# Build new indexes
+POST /faiss/build-async
+{
+  "products": [
+    {
+      "id": 1,
+      "image_url": "https://...",
+      "features": {
+        "kolor": "szary", 
+        "material": "tkanina",
+        "typ": "sofa"
+      }
+    }
+  ]
+}
+
+# Add products to existing indexes  
+POST /faiss/add-async
+{
+  "products": [...],
+  "append": true
+}
+```
+
+### Search
+```bash
+# Two-stage similarity search
+POST /faiss/search/two-stage
+{
+  "image_url": "https://...",
+  "features": {
+    "kolor": "beżowy",
+    "material": "tkanina"
+  },
+  "k": 6,
+  "remove_background": true,
+  "use_multiscale": true
+}
+```
+
+### Monitoring
+```bash
+# System health
+GET /health
+
+# Index statistics
+GET /faiss/stats
+
+# Task status
+GET /task/{task_id}
+```
+
+## 🏗️ Local Development
+
+### Prerequisites
+- Python 3.10+
+- CUDA 11.8+ 
+- 12GB+ GPU memory
+- Git LFS
+
+### Setup
+```bash
+git clone https://github.com/[username]/szuk-ai-embeddings.git
+cd szuk-ai-embeddings
+git lfs pull
+pip install -r requirements.txt
 python app.py
 ```
 
-## Konfiguracja ngrok
+## 🌐 Production Deployment
 
-1. Skonfiguruj ngrok z tokenem:
+### RunPod (Recommended)
+1. **Create template** from `runpod-template.md`
+2. **Deploy**: `curl setup.sh | bash`
+3. **Access**: ngrok tunnel or public IP
+4. **Scale**: Start/stop on demand
+
+### Docker
 ```bash
-./ngrok.exe authtoken 2zoy2kjtRzuXJfmQ3psR6C7iTFU_2ihkL4qpC9tMgmDVg8DTn
+docker-compose up -d
 ```
 
-2. Uruchom tunnel:
+### Costs
+- **Development**: ~$0.60/hour (RTX 4090)
+- **Production**: On-demand processing only
+- **Storage**: Free with Git LFS (under 2GB)
+
+## 📈 Performance
+
+### Processing Speed
+- **RTX 3060**: 3-5 sec/embedding
+- **RTX 4090**: 1-2 sec/embedding  
+- **A100**: 0.5-1 sec/embedding
+
+### Search Performance
+- **Index size**: 1750 products
+- **Search time**: <100ms
+- **Memory usage**: 5GB GPU + 8GB RAM
+
+## 🔐 Security
+
+### Authentication
+All endpoints require:
 ```bash
-./ngrok.exe http 5000
+X-API-Key: szuk_ai_embeddings_2024_secure_key
 ```
 
-## Endpointy
+### Rate Limiting
+- 100 requests/minute per IP
+- Configurable limits
 
-### POST /clip
-Generuje embeddingi CLIP z obrazu.
+## 🛠️ Model Configuration
 
-### POST /dino
-Generuje embeddingi DINOv2 z obrazu.
+### Switch Models
+```bash
+# Large models (production)
+POST /admin/switch-model-size
+{"model_size": "large"}
 
-### POST /text
-Generuje embeddingi tekstowe z cech produktu.
-
-**Przykład żądania:**
-```json
-{
-  "features": {
-    "material": "bawełna",
-    "kolor": "oliwkowy zielony",
-    "styl": "nowoczesna",
-    "typ": "narożna"
-  }
-}
+# Small models (development)  
+POST /admin/switch-model-size
+{"model_size": "small"}
 ```
 
-### POST /combined
-Generuje kombinowane embeddingi (CLIP + DINOv2 + Text).
-
-**Przykład żądania:**
-```json
-{
-  "image": "base64_encoded_image",
-  "features": {
-    "material": "bawełna",
-    "kolor": "oliwkowy zielony"
-  },
-  "weights": {
-    "clip": 0.4,
-    "dinov2": 0.3,
-    "text": 0.3
-  }
-}
+### Current Configuration
+```bash
+GET /admin/model-config
 ```
 
-### POST /faiss/build
-Buduje indeks FAISS z produktów.
+## 📚 Documentation
 
-**Przykład żądania:**
-```json
-{
-  "products": [
-    {
-      "id": 1,
-      "image": "base64_data",
-      "features": {
-        "material": "bawełna",
-        "kolor": "beżowy"
-      }
-    }
-  ],
-  "index_type": "hnsw"
-}
+- **[Deployment Guide](DEPLOYMENT.md)** - Complete setup instructions
+- **[RunPod Template](runpod-template.md)** - Template creation guide
+- **[Project Details](CLAUDE.md)** - Technical specifications
+- **[Security Info](SECURITY_INFO.md)** - Security guidelines
+
+## 🐛 Troubleshooting
+
+### Common Issues
+- **Memory errors**: Use smaller batch sizes or small models
+- **CUDA errors**: Restart pod and check GPU status
+- **LFS timeouts**: Increase git timeout settings
+
+### Support
+```bash
+# Check logs
+tail -f logs/app.log
+
+# Monitor GPU
+nvidia-smi
+
+# Test health
+curl http://localhost:5000/health
 ```
 
-### POST /faiss/search
-Wyszukuje podobne produkty.
+## 📊 Data Pipeline
 
-**Przykład żądania:**
-```json
-{
-  "embed_type": "combined",
-  "image": "base64_data",
-  "features": {
-    "material": "bawełna"
-  },
-  "k": 10
-}
+### Input → Processing → Output
+```
+Product Image → Background Removal → Multi-scale Processing
+     ↓                    ↓                     ↓
+CLIP Embedding ← DINOv2 Embedding ← Text Embedding  
+     ↓                    ↓                     ↓
+          Concatenation (5376 dims)
+                    ↓
+              FAISS Indexing
+                    ↓
+            Similarity Search
+                    ↓
+             Top 6-8 Results
 ```
 
-### POST /test/rnn
-Testuje Reciprocal Nearest Neighbors.
+## 🎯 Use Cases
 
-**Przykład żądania:**
-```json
-{
-  "embed_type": "combined",
-  "k": 5,
-  "test_samples": 50
-}
-```
+- **E-commerce**: Product recommendation
+- **Interior Design**: Style matching
+- **Inventory**: Similar product search
+- **Content**: Visual similarity detection
 
-### POST /batch
-Przetwarzanie batch.
+## 🚀 Future Enhancements
 
-**Przykład żądania:**
-```json
-{
-  "products": [
-    {
-      "id": 1,
-      "image": "base64_data",
-      "features": {...}
-    }
-  ],
-  "embed_types": ["combined"]
-}
-```
+- [ ] Vector database integration (Pinecone, Weaviate)
+- [ ] Real-time reindexing
+- [ ] Multi-language support
+- [ ] Advanced filtering options
+- [ ] A/B testing framework
 
-## Cechy produktów (Sofa)
+## 📄 License
 
-System obsługuje następujące cechy sof:
-- `material`: materiał (np. "bawełna", "poliester")
-- `specyfikacja_materialu`: szczegóły materiału (np. "sztruks")
-- `kolor`: kolor (np. "oliwkowy zielony")
-- `styl`: styl (np. "nowoczesna", "skandynawska")
-- `typ`: typ (np. "narożna", "prosta")
-- `pojemnosc`: pojemność (np. "3-osobowa")
-- `ksztalt`: kształt (np. "prostokątna")
-- `podstawa`: podstawa (np. "małe podnóżki")
-- `kierunek_ustawienia`: kierunek (np. "lewostronna")
-- `szezlong`: szezlong (np. "z szezlongiem")
-- `pikowana`: pikowanie (np. "pikowana")
-- `cechy_dodatkowe`: dodatkowe cechy
+MIT License - See LICENSE file for details
 
-## Użycie z n8n
+## 🤝 Contributing
 
-1. Uruchom serwer lokalnie
-2. Skonfiguruj ngrok i skopiuj publiczny URL
-3. W n8n używaj HTTP Request nodes z różnymi endpointami
+1. Fork repository
+2. Create feature branch
+3. Commit changes
+4. Push to branch  
+5. Create Pull Request
 
-## Specyfikacja techniczna
+---
 
-- **GPU**: NVIDIA RTX 3060 (12GB VRAM)
-- **Modele**: CLIP ViT-L/14, DINOv2 ViT-L/14, text-embedding-3-large
-- **Wagi domyślne**: CLIP (40%), DINOv2 (30%), Text (30%)
-- **FAISS**: IndexHNSW dla optymalnej wydajności
-- **Pojemność**: Do 10K produktów na kategorię
+**Powered by**: PyTorch • CLIP • DINOv2 • FAISS • Flask • RunPod

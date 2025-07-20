@@ -16,7 +16,7 @@ Advanced AI-powered furniture similarity search system using CLIP, DINOv2, and O
 ## 🚀 Quick Deploy (RunPod)
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/[username]/szuk-ai-embeddings/main/setup.sh | bash
+curl -sSL https://raw.githubusercontent.com/matthiaskaminski/embeddings/main/setup.sh | bash
 ```
 
 ## 📊 Architecture
@@ -100,8 +100,8 @@ GET /task/{task_id}
 
 ### Setup
 ```bash
-git clone https://github.com/[username]/szuk-ai-embeddings.git
-cd szuk-ai-embeddings
+git clone https://github.com/matthiaskaminski/embeddings.git
+cd embeddings
 git lfs pull
 pip install -r requirements.txt
 python app.py

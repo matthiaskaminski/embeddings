@@ -34,10 +34,10 @@ print_error() {
 # Check if we're in RunPod environment
 if [ -n "$RUNPOD_POD_ID" ]; then
     print_status "RunPod environment detected (Pod ID: $RUNPOD_POD_ID)"
-    INSTALL_DIR="/workspace/szuk-ai-embeddings"
+    INSTALL_DIR="/workspace/embeddings"
 else
     print_status "Local environment detected"
-    INSTALL_DIR="./szuk-ai-embeddings"
+    INSTALL_DIR="./embeddings"
 fi
 
 # Install system dependencies if needed
@@ -70,8 +70,8 @@ if [ -d "$INSTALL_DIR" ]; then
     rm -rf "$INSTALL_DIR"
 fi
 
-# Replace with actual repository URL
-REPO_URL="https://github.com/[username]/szuk-ai-embeddings.git"
+# Actual repository URL
+REPO_URL="https://github.com/matthiaskaminski/embeddings.git"
 git clone "$REPO_URL" "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 

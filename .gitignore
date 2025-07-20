@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+app_startup.log
+
+# OS
+.DS_Store
+Thumbs.db
+nul
+
+# Local config files (will be replaced by environment)
+config_local.py
+
+# Model cache (will be downloaded on demand)
+models/
+.cache/
+
+# Temporary files
+temp/
+tmp/

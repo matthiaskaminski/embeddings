@@ -1,0 +1,119 @@
+# PODSUMOWANIE SESJI - 19 stycznia 2025
+# System wyszukiwania podobieństw produktów - Większe modele i optymalizacja
+
+## 🎯 CO OSIĄGNĘLIŚMY DZIŚ:
+
+### ✅ 1. UPGRADE MODELI NA WIĘKSZE
+- **CLIP**: ViT-L/14 → ViT-L/14@336px (768 wymiarów, ale wyższa jakość)
+- **DINOv2**: dinov2-large → dinov2-giant (1024 → 1536 wymiarów) ✅
+- **Text**: Pozostał text-embedding-3-large (3072 wymiary)
+- **GPU Memory**: 5.11 GB używane (RTX 3060 12GB)
+
+### ✅ 2. REBUILD INDEXÓW Z WIĘKSZYMI MODELAMI
+- Udany rebuild wszystkich indexów FAISS z nowymi modelami
+- **1749 produktów** przetworzone pomyślnie
+- Indexy zapisane na dysku w faiss_storage/indexes/
+
+### ✅ 3. URUCHOMIENIE SERWERA I TUNNELU
+- Serwer działa na porcie 5000
+- Tunnel: **https://szukaiembeddings.loca.lt**
+- Metadane produktów: 1749 załadowane ✅
+
+### ✅ 4. IDENTYFIKACJA GŁÓWNEGO PROBLEMU
+**PROBLEM**: Funkcja `combine_embeddings()` używa **weighted average z paddingiem** zamiast **concatenation**!
+
+**Aktualne wymiary:**
+- Combined index: **3072** (błąd!)
+- Powinno być: **5376** (768 + 1536 + 3072)
+
+## 🚨 GŁÓWNE PROBLEMY DO ROZWIĄZANIA:
+
+### 1. BŁĘDNA FUNKCJA KOMBINOWANIA EMBEDDINGÓW
+**Problem**: `combine_embeddings()` robi weighted average po paddingu wszystkich embeddingów do rozmiaru 3072.
+**Rozwiązanie**: Naprawiona funkcja na concatenation - gotowa w kodzie, trzeba rebuild.
+
+### 2. SŁABE WYNIKI SIMILARITY
+- Visual similarity ~0.07 (bardzo małe wartości)
+- Sortowanie wyników wydaje się odwrócone
+- Prawdopodobnie przez błędną funkcję kombinowania
+
+### 3. BŁĄD PAMIĘCI
+Ostatni restart zakończył się błędem:
+```
+OSError: Plik stronicowania jest za mały do ukończenia tej operacji. (os error 1455)
+```
+
+## 📋 TODO NA JUTRO:
+
+### 🔥 PRIORYTET WYSOKI:
+1. **Fix memory error** - sprawdzić plik stronicowania Windows
+2. **Rebuild indexes z nową funkcją concatenation**
+   - Endpoint: `/faiss/rebuild-with-new-models`
+   - Oczekiwane wymiary: Combined = 5376
+3. **Test two-stage search** z nowymi indexami
+4. **Porównanie wyników** - stare vs nowe modele
+
+### 🔥 PRIORYTET ŚREDNI:
+5. **Analiza performance** - czy większe modele dają lepsze wyniki
+6. **Optymalizacja weights** dla concatenated embeddings
+7. **Separate no-bg indexes** - osobne indexy dla obrazów bez tła
+
+## 🔧 ENDPOINTS DO TESTOWANIA W N8N:
+
+### **Two-Stage Search (ZALECANY):**
+```
+POST https://szukaiembeddings.loca.lt/faiss/search/two-stage
+Headers: 
+  X-API-Key: szuk_ai_embeddings_2024_secure_key
+  Content-Type: application/json
+Body:
+{
+  "image_url": "https://example.com/sofa.jpg",
+  "features": {
+    "kolor": "szary",
+    "material": "tkanina", 
+    "typ": "sofa"
+  },
+  "k": 6,
+  "remove_background": true
+}
+```
+
+### **Enhanced Search:**
+```
+POST https://szukaiembeddings.loca.lt/faiss/search/enhanced
+```
+
+### **Multiscale Embeddings:**
+```
+POST https://szukaiembeddings.loca.lt/embeddings/multiscale
+```
+
+## 🛠️ ZMIANY W KODZIE:
+
+### Naprawiona funkcja combine_embeddings():
+```python
+def combine_embeddings(clip_emb, dinov2_emb, text_emb, weights=None):
+    # Concatenation zamiast weighted average!
+    clip_weighted = clip_emb * weights['clip']
+    dinov2_weighted = dinov2_emb * weights['dinov2'] 
+    text_weighted = text_emb * weights['text']
+    combined = np.concatenate([clip_weighted, dinov2_weighted, text_weighted])
+    return l2_normalize(combined, "Combined_final")
+```
+
+## 📊 OBECNY STAN SYSTEMU:
+
+**Serwer**: ✅ Działa na porcie 5000  
+**Tunnel**: ✅ https://szukaiembeddings.loca.lt  
+**Modele**: ✅ CLIP ViT-L/14@336px + DINOv2 giant  
+**Indexy**: ⚠️ Działają, ale błędne wymiary (3072 zamiast 5376)  
+**Produkty**: ✅ 1749 załadowane  
+**Memory**: ⚠️ Error przy restarcie  
+
+## 🎯 CEL NA JUTRO:
+**Pełny rebuild z concatenation** → **Lepsze wyniki similarity** → **Test w N8N**
+
+---
+Zapisane: 19 stycznia 2025, 21:30
+Status: Gotowe do kontynuacji jutro

@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  szuk-ai-embeddings:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./faiss_storage:/app/faiss_storage
+      - ./logs:/app/logs
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/app
+      - FLASK_ENV=production
+      - OMP_NUM_THREADS=8
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
